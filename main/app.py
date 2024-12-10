@@ -30,13 +30,17 @@ class Appointment(db.Model):
         return f'<Appointment {self.date} {self.time}>'
 
 #routes
-
 @app.route('/appointments', methods=['POST'])
 def add_appointment():
     data = request.get_json()
-    user_id = data['user_id']
-    date = data['date']
-    time = data['time']
+    user_id = data.get('user_id')
+    date = data.get('date')
+    time = data.get('time')
+
+    # Check if user exists
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found!'}), 404
 
     new_appointment = Appointment(user_id=user_id, date=date, time=time)
     db.session.add(new_appointment)
@@ -46,11 +50,33 @@ def add_appointment():
 
 @app.route('/appointments/<int:id>', methods=['DELETE'])
 def delete_appointment(id):
+    # Get the appointment to delete
     appointment = Appointment.query.get_or_404(id)
+
+    # Delete the appointment
     db.session.delete(appointment)
     db.session.commit()
-    
+
     return jsonify({'message': 'Appointment canceled successfully!'}), 200
+
+@app.route('/appointments/<int:id>', methods=['PUT'])
+def update_appointment(id):
+    # Get the appointment to update
+    appointment = Appointment.query.get_or_404(id)
+
+    # Get the updated data from the request
+    data = request.get_json()
+    new_date = data.get('date', appointment.date)
+    new_time = data.get('time', appointment.time)
+
+    # Update the appointment
+    appointment.date = new_date
+    appointment.time = new_time
+
+    # Commit the changes to the database
+    db.session.commit()
+
+    return jsonify({'message': 'Appointment updated successfully!'}), 200
 
 @app.route('/')
 def index():
